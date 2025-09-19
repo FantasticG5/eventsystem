@@ -16,5 +16,6 @@ public class TrainingClassDto
     public string Location { get; set; } = string.Empty;
     public string Instructor { get; set; } = string.Empty;
     public int Capacity { get; set; }
+    public int ReservedSeats { get; set; }
 
 }
