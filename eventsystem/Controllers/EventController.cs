@@ -23,4 +23,14 @@ public class EventController(ITrainingClassService trainingClassService) : Contr
         return Ok(trainingClass);
     }
 
+    [HttpGet]
+    public async Task<IActionResult> GetAll(CancellationToken ct)
+    {
+        var classes = await _trainingClassService.GetAllTrainingClassesAsync(ct);
+        if (classes == null)
+            return NotFound();
+
+        return Ok(classes);
+    }
+
 }

@@ -40,4 +40,27 @@ public class TrainingClassService(ITrainingClassRepository trainingRepository) :
         return dto;
     }
 
+    public async Task<List<TrainingClassDto>> GetAllTrainingClassesAsync(CancellationToken ct = default)
+    {
+        // Hämta entity från repository
+        var result = await _trainingRepository.GetAllAsync(ct);
+
+        // Om anropet misslyckades eller resultatet är null
+        if (!result.Succeeded || result.Result == null)
+            return new List<TrainingClassDto>();
+
+        // Mappa entity till DTO
+        return result.Result.Select(x => new TrainingClassDto
+        {
+            Id = x.Id,
+            Title = x.Title,
+            Description = x.Description,
+            StartTime = x.StartTime,
+            EndTime = x.EndTime,
+            Location = x.Location,
+            Instructor = x.Instructor,
+            Capacity = x.Capacity
+        }).ToList();
+    }
+
 }
