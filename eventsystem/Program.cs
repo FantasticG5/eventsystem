@@ -42,9 +42,12 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi(); // /openapi/v1.json + auto UI om du k�r via VS/HTTP REPL etc.
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
+
+// Valfritt: redirect root till Swagger
+app.MapGet("/", () => Results.Redirect("/swagger"));
 
 // Apply EF Core migrations on startup
 using (var scope = app.Services.CreateScope())
