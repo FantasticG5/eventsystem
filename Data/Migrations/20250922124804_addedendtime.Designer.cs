@@ -4,6 +4,7 @@ using Data.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Data.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250922124804_addedendtime")]
+    partial class addedendtime
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -78,7 +81,7 @@ namespace Data.Migrations
                             Id = 1,
                             Capacity = 20,
                             Description = "Ett lugnt yogapass för alla nivåer.",
-                            EndTime = new DateTime(2025, 9, 20, 18, 30, 0, 0, DateTimeKind.Utc),
+                            EndTime = new DateTime(2025, 9, 20, 18, 3, 0, 0, DateTimeKind.Utc),
                             Instructor = "Anna Svensson",
                             Location = "Sal A",
                             ReservedSeats = 0,
@@ -91,7 +94,7 @@ namespace Data.Migrations
                             Id = 2,
                             Capacity = 18,
                             Description = "Intensivt spinningpass med hög energi.",
-                            EndTime = new DateTime(2025, 9, 20, 18, 45, 0, 0, DateTimeKind.Utc),
+                            EndTime = new DateTime(2025, 9, 20, 18, 3, 0, 0, DateTimeKind.Utc),
                             Instructor = "Johan Karlsson",
                             Location = "Spinningsalen",
                             ReservedSeats = 0,
