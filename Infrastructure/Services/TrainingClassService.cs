@@ -26,7 +26,8 @@ public class TrainingClassService(ITrainingClassRepository trainingRepository) :
             EndTime = result.Result.EndTime,
             Location = result.Result.Location,
             Instructor = result.Result.Instructor,
-            Capacity = result.Result.Capacity
+            Capacity = result.Result.Capacity,
+            ReservedSeats = result.Result.ReservedSeats
         };
 
         return dto;
@@ -48,7 +49,9 @@ public class TrainingClassService(ITrainingClassRepository trainingRepository) :
             EndTime = x.EndTime,
             Location = x.Location,
             Instructor = x.Instructor,
-            Capacity = x.Capacity
+            Capacity = x.Capacity,
+            ReservedSeats = x.ReservedSeats
+
         }).ToList();
     }
 
