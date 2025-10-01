@@ -1,78 +1,107 @@
+// Program.cs (Event/TrainingClasses)
 using Data.Contexts;
 using Data.Interfaces;
 using Data.Repositories;
 using Infrastructure.Interfaces;
 using Infrastructure.Services;
+using Infrastructure.Option;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.DataProtection;
-using System.IO;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Event Service API", Version = "v1" });
+    var jwtScheme = new OpenApiSecurityScheme
+    {
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Reference = new OpenApiReference { Id = "Bearer", Type = ReferenceType.SecurityScheme }
+    };
+    c.AddSecurityDefinition("Bearer", jwtScheme);
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement { { jwtScheme, Array.Empty<string>() } });
+});
 
-// DbContext via appsettings: ConnectionStrings:DefaultConnection
+// DbContext
 builder.Services.AddDbContext<DataContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
-// ===== DataProtection (delad nyckelring mellan tjänster) =====
-var keysPath = Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-    "CoreGym", "dp-keys"
-);
-Directory.CreateDirectory(keysPath);
+builder.Configuration.AddEnvironmentVariables();
+builder.Services.Configure<JwtValidationOptions>(builder.Configuration.GetSection(JwtValidationOptions.SectionName));
 
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(keysPath))
-    .SetApplicationName("CoreGym"); // MÅSTE matcha AuthSystem
-
+// Services/Repos
 builder.Services.AddScoped<ITrainingClassService, TrainingClassService>();
 builder.Services.AddScoped<ITrainingClassRepository, TrainingClassRepository>();
 
+// JWT Bearer
+var jwt = builder.Configuration.GetSection(JwtValidationOptions.SectionName).Get<JwtValidationOptions>()!;
+var accessKey = new SymmetricSecurityKey(Convert.FromBase64String(jwt.AccessKey));
 
-builder.Services.AddControllers();
-builder.Services.AddOpenApi();
-builder.Services.AddSwaggerGen();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(o =>
+    {
+        o.TokenValidationParameters = new()
+        {
+            ValidIssuer = jwt.Issuer,
+            ValidAudience = jwt.Audience,
+            IssuerSigningKey = accessKey,
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+    });
 
 builder.Services.AddAuthorization();
 
-// ===== CORS: hårdkodat origin =====
+// CORS
 const string SpaCors = "spa";
-string[] allowedOrigins = { "https://fantasticg5-dmdbeshvcmfxe6ey.northeurope-01.azurewebsites.net", "http://localhost:5173", "https://localhost:5173" };
-
+string[] allowedOrigins = {
+    "https://fantasticg5-dmdbeshvcmfxe6ey.northeurope-01.azurewebsites.net",
+    "http://localhost:5173",
+    "https://localhost:5173"
+};
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy(SpaCors, p => p
         .WithOrigins(allowedOrigins)
         .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials());
+        .AllowAnyMethod());
 });
 
 var app = builder.Build();
 
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor,
+    RequireHeaderSymmetry = false,
+    ForwardLimit = null
+});
 
-app.UseAuthentication();
+app.UseCors(SpaCors);
+
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.RoutePrefix = string.Empty;
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Event Service Api");
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Event Service API");
 });
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi(); // /openapi/v1.json + auto UI om du k�r via VS/HTTP REPL etc.
-}
-
-app.UseHttpsRedirection();
-app.UseCors(SpaCors); 
+app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
-// Apply EF Core migrations on startup
+// (Valfritt) automigrering
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<DataContext>();
