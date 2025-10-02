@@ -1,0 +1,26 @@
+# syntax=docker/dockerfile:1.6
+
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+# Copy csproj first (case-sensitive!)
+COPY eventsystem/eventsystem.csproj eventsystem/
+COPY Infrastructure/Infrastructure.csproj Infrastructure/
+COPY Data/Data.csproj Data/
+
+# Restore the web project (it will pull referenced projects)
+RUN dotnet restore eventsystem/eventsystem.csproj
+
+# Copy rest of the source
+COPY . .
+
+# Publish (no AssemblyName override)
+RUN dotnet publish eventsystem/eventsystem.csproj -c Release -o /app/publish /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+WORKDIR /app
+ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
+
+COPY --from=build /app/publish ./
+ENTRYPOINT ["dotnet", "eventsystem.dll"]
